@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+	<head>
+		<title>Filters</title>
+		<script src="jquery-1.7.1.min.js"></script>
+		<script src="webgl-inspector.js"></script>
+		<script id="vertex_shader" type="x-shader/x-vertex">
+			precision highp float;
+			attribute vec3 pos;
+
+			void main() {
+				gl_Position = vec4(pos.xyz-1.0, 1);
+			}
+		</script>
+		<script id="fragment_shader" type="x-shader/x-fragment">
+			precision highp float;
+			uniform float time;
+			uniform vec2 resolution;
+
+			uniform sampler2D sampler;
+			vec2 coord;
+
+			vec3 sample(vec2 co) {
+				return texture2D(sampler, (co + 1.0) / 2.0).rgb;
+			}
+
+			vec3 normal() {
+				return sample(coord);
+			}
+
+			vec3 sepia() {
+				vec3 c = sample(coord);
+				return vec3(
+					c.r * 0.393 + c.g * 0.769 + c.b * 0.189, 
+					c.r * 0.349 + c.g * 0.686 + c.b * 0.168, 
+					c.r * 0.272 + c.g * 0.534 + c.b * 0.131
+				);
+			}
+
+			vec3 greyscale() {
+				vec3 c = sample(coord);
+				return vec3(c.r * 0.299 + c.g * 0.587 + c.b * 0.114);
+			}
+
+			vec2 rotate(vec2 co, float a) {
+				float sa = sin(a);
+				float ca = cos(a);
+				return vec2(
+					co.x * ca - co.y * sa, 
+					co.y * ca + co.x * sa
+				);
+			}
+
+			vec3 swirl() {
+				vec3 s = sample(coord);
+				float a = 1.0 / sqrt(dot(coord, coord)) / 2.0;
+				return sample(rotate(coord, a));
+			}
+
+			vec3 light_tunnel() {
+				vec3 c = sample(coord);
+				return sample(dot(c, c) * sqrt(abs(sin(time / 11.0) * cos(time / 7.0))) * coord);
+			}
+
+			/* Thanks, iq! */
+			float impulse(float k, float x) {
+				float h = k * x;
+				return h*exp(1.0-h);
+			}
+
+			vec3 matrix() {
+				float off = impulse(mod(time * 1.1 + coord.y, 2.0) * 1.0, 200.0) * 0.1;
+				off += sin(mod(time * 50.0, 100.0) * coord.y * 10.0) * impulse(mod(time * 400.0, 1.0), 0.5) * 0.01;
+				vec3 c = sample(vec2(coord.x + off, coord.y));
+				c = vec3(c.r * 0.5, dot(c, c) * 0.4 + c.g * 0.25, c.b * 0.5);
+				return c;
+			}
+
+			vec3 mirror_right() {
+				return sample(vec2(abs(coord.x), coord.y));
+			}
+
+			vec3 mirror_left() {
+				return sample(vec2(-abs(coord.x), coord.y));
+			}
+
+			vec3 mirror_top() {
+				return sample(vec2(coord.x, abs(coord.y)));
+			}
+
+			vec3 mirror_bottom() {
+				return sample(vec2(coord.x, -abs(coord.y)));
+			}
+
+			vec3 kaleidoscope() {
+				return sample(rotate(coord, sin(sqrt(coord.y * time))));
+			}
+
+			void main() {
+				coord = gl_FragCoord.xy / resolution * 2.0 - 1.0;
+				gl_FragColor = vec4($func$(), 1.0);
+			}
+		</script>
+		<script src="filters.js"></script>
+	</head>
+	<body>
+	    <img id="car" src="car.jpg" style="display: none;">
+	    <img id="mona_lisa" src="monalisa.jpg" style="display: none;">
+		<a href="javascript:set_tex('mona_lisa', false)">Mona Lisa</a><br>
+		<a href="javascript:set_tex('car', false)">Car</a><br>
+		<br>
+		<a href="javascript:choose_function('normal')">Normal</a> *
+		<a href="javascript:choose_function('greyscale')">Greyscale</a> *
+		<a href="javascript:choose_function('sepia')">Sepia</a> *
+		<a href="javascript:choose_function('swirl')">Swirl</a> *
+		<a href="javascript:choose_function('light_tunnel')">Light tunnel</a> *
+		<a href="javascript:choose_function('matrix')">Matrix</a> *
+		<a href="javascript:choose_function('kaleidoscope')">Kaleidoscope</a> *
+		<a href="javascript:choose_function('mirror_right')">Mirror right</a> *
+		<a href="javascript:choose_function('mirror_left')">Mirror left</a> *
+		<a href="javascript:choose_function('mirror_top')">Mirror top</a> *
+		<a href="javascript:choose_function('mirror_bottom')">Mirror bottom</a>
+		<br><br>
+		<canvas id="cvs" class="foo"/>
+	</body>
+</html>
