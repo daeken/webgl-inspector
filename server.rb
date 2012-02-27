@@ -8,7 +8,7 @@ end
 
 get '/webgl-inspector.js' do
 	content_type "text/javascript"
-	coffee File.read('webgl-inspector.cs')
+	coffee File.read('webgl-inspector.coffee')
 end
 
 get '/*.js' do |fn|
